@@ -32,5 +32,8 @@ fn main() {
         process::exit(1);
     }
 
-    let um: um::UmState = um::UmState::new();
+    let mut um: um::UmState = um::UmState::new();
+//    println_stderr!("New segment: {}", um.map_new_segment(3));
+//    println_stderr!("New segment: {}", um.map_new_segment(1));
+//    println_stderr!("New segment: {}", um.map_new_segment(60));
 }
