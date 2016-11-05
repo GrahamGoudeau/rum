@@ -22,7 +22,14 @@ impl<'a> UmState<'a> {
         }
     }
 
-    pub fn map_new_segment(&self) -> i32 {
-        0
+    pub fn map_new_segment(&mut self) -> i32 {
+        match self.recycledIds.pop() {
+            None => {
+                let ret = self.maxUnusedId;
+                self.maxUnusedId += 1;
+                ret
+            },
+            Some(id) => id
+        }
     }
 }
