@@ -144,10 +144,20 @@ impl UmState {
     pub fn run(&mut self) {
         let dispatch_table = [
             cond_move,
-            seg_load
+            seg_load,
+            seg_store,
+            add,
+            mult,
+            div,
+            nand,
+            halt
         ];
         loop {
             let instruction: i32 = self.segmented_memory.fetch_instruction(self.program_counter);
+            let opcode_value = get_opcode_value(instruction);
+            get_field(instruction, THREE_REG_B_LSB, REGISTER_FIELD_WIDTH);
+            //dispatch_table[opcode_value as usize](self, instruction);
+            break;
         }
     }
 }
