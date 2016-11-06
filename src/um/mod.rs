@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::process;
 use std::fs::File;
 use std::io::Read;
 
@@ -57,15 +57,77 @@ fn decode_file(input_code: File) -> Vec<i32> {
     code
 }
 
-fn cond_move(state: &mut UmState, instruction: Op_Codes) -> usize {
-    match instruction {
-        Op_Codes::Seg_Load(data) => state.program_counter,
-        _ => panic!("Nope")
-    }
+fn get_field(word: i32, lsb: u8, width: u8) -> i32 {
+    ((word as u32) << (32 - (width + lsb)) >> (32 - width)) as i32
 }
 
-fn seg_load(state: &mut UmState, instruction: Op_Codes) -> usize {
-    state.program_counter
+fn get_three_reg_a(instruction: i32) -> usize {
+    get_field(instruction, THREE_REG_A_LSB, REGISTER_FIELD_WIDTH) as usize
+}
+
+fn get_three_reg_c(instruction: i32) -> usize {
+    get_field(instruction, THREE_REG_C_LSB, REGISTER_FIELD_WIDTH) as usize
+}
+
+fn get_three_reg_b(instruction: i32) -> usize {
+    get_field(instruction, THREE_REG_B_LSB, REGISTER_FIELD_WIDTH) as usize
+}
+
+fn cond_move(state: &mut UmState, instruction: i32) -> usize {
+    if get_three_reg_c(instruction) != 0 {
+        state.registers[get_three_reg_a(instruction)] = state.registers[get_three_reg_b(instruction)];
+    }
+    state.program_counter + 1
+}
+
+fn seg_load(state: &mut UmState, instruction: i32) -> usize {
+    let memory_result = state.segmented_memory.read_word(get_three_reg_b(instruction) as i32, get_three_reg_c(instruction));
+    state.registers[get_three_reg_a(instruction)] = match memory_result {
+        Ok(value) => value,
+        Err(err) => panic!(err)
+    };
+    state.program_counter + 1
+}
+
+fn seg_store(state: &mut UmState, instruction: i32) -> usize {
+    state.segmented_memory.write_word(
+        get_three_reg_a(instruction) as i32,
+        get_three_reg_b(instruction),
+        get_three_reg_c(instruction) as i32);
+    state.program_counter + 1
+}
+
+fn math<F: Fn(i32, i32) -> i32>(state: &mut UmState, instruction: i32, operator: F) -> usize
+where F: Fn(i32, i32) -> i32 {
+    let result = operator(
+                    state.registers[get_three_reg_b(instruction)],
+                    state.registers[get_three_reg_c(instruction)]);
+    state.registers[(get_three_reg_a(instruction))] = result;
+    state.program_counter + 1
+}
+
+fn add(state: &mut UmState, instruction: i32) -> usize {
+    math(state, instruction, |a, b| a + b)
+}
+
+fn mult(state: &mut UmState, instruction: i32) -> usize {
+    math(state, instruction, |a, b| a * b)
+}
+
+fn div(state: &mut UmState, instruction: i32) -> usize {
+    math(state, instruction, |a, b| a / b)
+}
+
+fn nand(state: &mut UmState, instruction: i32) -> usize {
+    math(state, instruction, |a, b| !(a & b))
+}
+
+fn halt(state: &mut UmState, instruction: i32) -> usize {
+    process::exit(0)
+}
+
+fn get_opcode_value(instruction: i32) -> u32 {
+    (instruction as u32) >> (32 - OPCODE_FIELD_WIDTH)
 }
 
 impl UmState {
