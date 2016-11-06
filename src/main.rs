@@ -41,4 +41,5 @@ fn main() {
         Err(_) => panic!("Could not open file {}", &input_file_name_str)
     };
     let mut um: um::UmState = um::UmState::new(input_file);
+    um.run();
 }
