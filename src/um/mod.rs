@@ -5,6 +5,13 @@ use std::io::Read;
 mod segmented_memory;
 
 const NUM_REGISTERS: usize = 8;
+const OPCODE_FIELD_WIDTH: u8 = 4;
+const REGISTER_FIELD_WIDTH: u8 = 3;
+const THREE_REG_A_LSB: u8 = 6;
+const THREE_REG_B_LSB: u8 = THREE_REG_A_LSB - 3;
+const THREE_REG_C_LSB: u8 = THREE_REG_B_LSB - 3;
+const ONE_REG_A_LSB: u8 = 25;
+const ONE_REG_VALUE_LSB: u8 = 0;
 
 struct Three_Register_Data {
     regA: i32,
