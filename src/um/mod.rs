@@ -6,8 +6,19 @@ mod segmented_memory;
 
 const NUM_REGISTERS: usize = 8;
 
+struct Three_Register_Data {
+    regA: i32,
+    regB: i32,
+    regC: i32
+}
+
+enum Op_Codes {
+    Cond_Move(Three_Register_Data),
+    Seg_Load(Three_Register_Data)
+}
+
 pub struct UmState {
-    program_counter: i32,
+    program_counter: usize,
     registers: [i32; NUM_REGISTERS],
     segmented_memory: segmented_memory::SegmentedMemory,
 }
@@ -39,14 +50,35 @@ fn decode_file(input_code: File) -> Vec<i32> {
     code
 }
 
+fn cond_move(state: &mut UmState, instruction: Op_Codes) -> usize {
+    match instruction {
+        Op_Codes::Seg_Load(data) => state.program_counter,
+        _ => panic!("Nope")
+    }
+}
+
+fn seg_load(state: &mut UmState, instruction: Op_Codes) -> usize {
+    state.program_counter
+}
+
 impl UmState {
     pub fn new(input_code: File) -> UmState {
         let instructions = decode_file(input_code);
-        let mut memory = segmented_memory::SegmentedMemory::new(&instructions);
+        let memory = segmented_memory::SegmentedMemory::new(&instructions);
         UmState {
             program_counter: 0,
             registers: [0; NUM_REGISTERS],
             segmented_memory: memory
+        }
+    }
+
+    pub fn run(&mut self) {
+        let dispatch_table = [
+            cond_move,
+            seg_load
+        ];
+        loop {
+            let instruction: i32 = self.segmented_memory.fetch_instruction(self.program_counter);
         }
     }
 }
