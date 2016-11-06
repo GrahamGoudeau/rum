@@ -1,5 +1,6 @@
 use std::env;
 use std::process;
+use std::fs::File;
 use std::io::Write;
 
 mod um;
@@ -21,19 +22,23 @@ fn main() {
         None => panic!("Could not get script name")
     };
 
-    let input_file: Option<String> = if env::args().count() != 2 {
+    let input_file_name: Option<String> = if env::args().count() != 2 {
         None
     } else {
         env::args().nth(1)
     };
 
-    if input_file == None {
-        usage(&script_name);
-        process::exit(1);
-    }
+    let input_file_name_str = match input_file_name {
+        None => {
+            usage(&script_name);
+            process::exit(1);
+        },
+        Some(name) => name
+    };
 
-    let mut um: um::UmState = um::UmState::new();
-//    println_stderr!("New segment: {}", um.map_new_segment(3));
-//    println_stderr!("New segment: {}", um.map_new_segment(1));
-//    println_stderr!("New segment: {}", um.map_new_segment(60));
+    let mut input_file: File = match File::open(&input_file_name_str) {
+        Ok(file) => file,
+        Err(_) => panic!("Could not open file {}", &input_file_name_str)
+    };
+    let mut um: um::UmState = um::UmState::new(input_file);
 }

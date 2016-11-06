@@ -13,16 +13,35 @@ pub type Segment = Vec<i32>;
 
 pub struct SegmentedMemory {
     segments: HashMap<i32, Segment>,
+    segment_zero: Segment,
     recycledIds: Vec<i32>,
     maxUnusedId: i32,
 }
 
 impl SegmentedMemory {
-    pub fn new() -> SegmentedMemory {
+    pub fn new(initial_instructions: &Vec<i32>) -> SegmentedMemory {
         SegmentedMemory {
             segments: HashMap::new(),
+            segment_zero: initial_instructions.to_owned(),
             recycledIds: Vec::new(),
             maxUnusedId: 0,
+        }
+    }
+
+    pub fn fetch_instruction(&self, program_counter: usize) -> i32 {
+        self.segment_zero[program_counter]
+    }
+
+    pub fn load_segment_zero(&mut self, segment_id: i32) -> MemoryResult<()> {
+        if segment_id == 0 {
+            return Ok(())
+        }
+        match self.segments.get(&segment_id) {
+            Some(segment) => {
+                self.segment_zero = segment.to_owned();
+                Ok(())
+            }
+            None => Err(MemoryError::unrecognized_segment_id)
         }
     }
 
@@ -68,16 +87,5 @@ impl SegmentedMemory {
             Some(segment) => Ok(segment[offset]),
             None => Err(MemoryError::unrecognized_segment_id)
         }
-    }
-
-    pub fn get_segment(&self, segment_id: i32) -> MemoryResult<&Vec<i32>> {
-        /*
-        match self.segments.get(&segment_id) {
-            Some(segment) => Ok(segment),
-            None => Err(MemoryError::unrecognized_segment_id)
-        };
-        */
-
-        Err(MemoryError::unrecognized_segment_id)
     }
 }
