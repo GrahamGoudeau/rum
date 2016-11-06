@@ -1,1 +1,5 @@
 target
+*.bk
+*.swp
+rum
+*.rustfmt
