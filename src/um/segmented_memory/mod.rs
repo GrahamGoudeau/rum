@@ -9,83 +9,66 @@ pub enum MemoryError {
 }
 
 pub type MemoryResult<T> = Result<T, MemoryError>;
-pub type Segment = Vec<i32>;
+pub type Segment = Vec<u32>;
 
 pub struct SegmentedMemory {
-    segments: HashMap<i32, Segment>,
-    segment_zero: Segment,
-    recycledIds: Vec<i32>,
-    maxUnusedId: i32,
+    segments: Vec<Segment>,
+    recycledIds: Vec<u32>,
+    maxUnusedId: u32,
 }
 
 impl SegmentedMemory {
-    pub fn new(initial_instructions: &Vec<i32>) -> SegmentedMemory {
-        SegmentedMemory {
-            segments: HashMap::new(),
-            segment_zero: initial_instructions.to_owned(),
+    pub fn new(initial_instructions: &Vec<u32>) -> SegmentedMemory {
+        let seg_zero = initial_instructions.to_owned();
+        let mut mem = SegmentedMemory {
+            segments: Vec::new(),
             recycledIds: Vec::new(),
-            maxUnusedId: 0,
+            maxUnusedId: 1,
+        };
+        mem.segments.push(seg_zero);
+        mem
+    }
+
+    pub fn fetch_instruction(&self, program_counter: usize) -> u32 {
+        self.segments[0][program_counter]
+    }
+
+    pub fn load_segment_zero(&mut self, segment_id: u32) -> () {
+        if segment_id != 0 {
+            self.segments[0] = self.segments[segment_id as usize].to_owned();
         }
     }
 
-    pub fn fetch_instruction(&self, program_counter: usize) -> i32 {
-        self.segment_zero[program_counter]
-    }
-
-    pub fn load_segment_zero(&mut self, segment_id: i32) -> MemoryResult<()> {
-        if segment_id == 0 {
-            return Ok(())
-        }
-        match self.segments.get(&segment_id) {
-            Some(segment) => {
-                self.segment_zero = segment.to_owned();
-                Ok(())
-            }
-            None => Err(MemoryError::unrecognized_segment_id)
-        }
-    }
-
-    pub fn map_new_segment(&mut self, length: usize) -> MemoryResult<i32> {
-        if length < 1 {
-            Err(MemoryError::invalid_segment_size)
+    pub fn map_new_segment(&mut self, length: usize) -> u32 {
+        let new_id = match self.recycledIds.pop() {
+            None => {
+                let ret = self.maxUnusedId;
+                self.maxUnusedId += 1;
+                ret
+            },
+            Some(id) => id
+        };
+        let new_segment = vec![0; length];
+        let segments_len = self.segments.len();
+        if new_id as usize >= segments_len {
+            self.segments.push(new_segment)
         } else {
-            let new_id = match self.recycledIds.pop() {
-                None => {
-                    let ret = self.maxUnusedId;
-                    self.maxUnusedId += 1;
-                    ret
-                },
-                Some(id) => id
-            };
-            let new_segment = vec![0; length];
-            self.segments.insert(new_id, new_segment);
-            Ok(new_id)
+            self.segments[new_id as usize] = new_segment
         }
+        new_id
     }
 
-    pub fn unmap_segment(&mut self, segment_id: i32) -> MemoryResult<i32> {
-        match self.segments.remove(&segment_id) {
-            Some(k) => {
-                self.recycledIds.push(segment_id);
-                Ok(segment_id)
-            }
-            None => Err(MemoryError::unrecognized_segment_id)
-        }
+    pub fn unmap_segment(&mut self, segment_id: u32) -> u32 {
+        self.recycledIds.push(segment_id);
+        segment_id
     }
 
-    pub fn write_word(&mut self, segment_id: i32, offset: usize, word: i32) -> MemoryResult<i32> {
-        if let Some(segment) = self.segments.get_mut(&segment_id) {
-            segment[offset] = word;
-            Ok(segment_id)
-        } else {
-            Err(MemoryError::unrecognized_segment_id)
-        }
+    pub fn write_word(&mut self, segment_id: u32, offset: usize, word: u32) -> u32 {
+        self.segments[segment_id as usize][offset as usize] = word;
+        segment_id
     }
 
-    pub fn read_word(&self, segment_id: i32, offset: usize) -> MemoryResult<i32> {
-        match self.segments.get(&segment_id) {
-            Some(segment) => Ok(segment[offset]),
-            None => Err(MemoryError::unrecognized_segment_id)
-        }
+    pub fn read_word(&self, segment_id: u32, offset: usize) -> u32 {
+        self.segments[segment_id as usize][offset as usize]
     }
 }

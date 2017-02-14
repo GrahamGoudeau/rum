@@ -1,7 +1,9 @@
 use std::env;
 use std::process;
-use std::fs::File;
 use std::io::Write;
+use std::fs::File;
+use std::io::{self};
+use std::io::Read;
 
 mod um;
 
@@ -40,6 +42,35 @@ fn main() {
         Ok(file) => file,
         Err(_) => panic!("Could not open file {}", &input_file_name_str)
     };
-    let mut um: um::UmState = um::UmState::new(input_file);
+    let mut um: um::UmState = um::UmState::new(&input_file);
+    use um::segmented_memory::SegmentedMemory;
+    let mut mem = SegmentedMemory::new(&decode_file(&input_file));
     um.run();
+}
+
+fn decode_file(input_code: &File) -> Vec<u32> {
+    let mut code: Vec<u32> = Vec::new();
+    let mut counter = 0;
+    let mut instruction: u32 = 0;
+    for byte_result in input_code.bytes() {
+        match byte_result {
+            Ok(byte) => {
+                instruction |= (byte as u32) << ((4 - (counter + 1)) * 8);
+                if counter % 4 == 3 {
+                    counter = 0;
+                    code.push(instruction);
+                    instruction = 0;
+                    continue;
+                }
+                counter += 1;
+            },
+            Err(_) => panic!("Malformed input file")
+        };
+    }
+
+    if counter != 0 {
+        panic!("Malformed input file");
+    }
+
+    code
 }
